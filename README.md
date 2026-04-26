@@ -1,16 +1,51 @@
-# React + Vite
+# JobLinked Sta. Maria 🏛️💼
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+JobLinked is the official, high-end digital employment gateway for **Santa Maria, Bulacan**. It connects the local workforce with premier industrial opportunities, government programs (TUPAD, SPES, GIP), and professional career paths.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🌟 Key Features
 
-## React Compiler
+- **Local Job Board**: Curated listings from top companies in Sta. Maria, ranging from Manufacturing to Corporate roles.
+- **Government Programs**: Direct access to municipal and national employment programs like TUPAD, SPES, and GIP.
+- **Smart Search**: Filter opportunities by Barangay, Industry Sector, or Job Type.
+- **Unified Dashboard**: Personalized portal for applicants to track their applications and for employers to manage listings.
+- **Modern UI/UX**: A premium, responsive interface featuring Dark Mode support, glassmorphism aesthetics, and smooth animations.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🛠️ Technical Stack
 
-## Expanding the ESLint configuration
+- **Framework**: [React 19](https://react.dev/)
+- **Build Tool**: [Vite 6](https://vitejs.dev/)
+- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **Routing**: [React Router v7](https://reactrouter.com/)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 🚀 Getting Started
+
+1. **Clone the repository**:
+   ```bash
+   git clone <repository-url>
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Run the development server**:
+   ```bash
+   npm run dev
+   ```
+
+---
+
+## ❤️ Special Message
+
+**i love sir jays**
+
+---
+
+## 🏛️ About Sta. Maria PESO
+This project is designed to empower the citizens of Sta. Maria by streamlining the recruitment process and making government employment programs more accessible to everyone.
+
+*Built with passion for the Sta. Maria Workforce.*

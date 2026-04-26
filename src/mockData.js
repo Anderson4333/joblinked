@@ -7,8 +7,9 @@ export const JOBS_DATA = [
     type: "Full-time",
     category: "Professional",
     salary: "₱30,000 - ₱45,000",
-    description: "Join our core team for upcoming municipal projects in Sta. Maria.",
-    requirements: ["BS Civil Engineering", "Licensed", "2+ years experience"]
+    description:
+      "Join our core team for upcoming municipal projects in Sta. Maria.",
+    requirements: ["BS Civil Engineering", "Licensed", "2+ years experience"],
   },
   {
     id: 2,
@@ -19,7 +20,7 @@ export const JOBS_DATA = [
     category: "Skilled Labor",
     salary: "₱600 - ₱800 / day",
     description: "Experienced masons needed for residential developments.",
-    requirements: ["TESDA NC II Certified", "Physical fitness"]
+    requirements: ["TESDA NC II Certified", "Physical fitness"],
   },
   {
     id: 3,
@@ -29,8 +30,9 @@ export const JOBS_DATA = [
     type: "GIP",
     category: "Student Programs",
     salary: "Minimum Wage",
-    description: "Government Internship Program for students residing in Sta. Maria.",
-    requirements: ["Student/Graduate", "Resident of Sta. Maria"]
+    description:
+      "Government Internship Program for students residing in Sta. Maria.",
+    requirements: ["Student/Graduate", "Resident of Sta. Maria"],
   },
   {
     id: 4,
@@ -41,18 +43,18 @@ export const JOBS_DATA = [
     category: "Professional",
     salary: "₱14,000 - ₱16,000",
     description: "Help provide excellent service to local shoppers.",
-    requirements: ["HS Graduate", "Good communication skills"]
+    requirements: ["HS Graduate", "Good communication skills"],
   },
   {
     id: 5,
-    title: "Warehouse Helper",
+    title: "Rica Mendoza",
     company: "Santa Clara Logistics Hub",
     location: "Santa Clara, Sta. Maria",
     type: "Full-time",
     category: "Skilled Labor",
     salary: "₱12,000 - ₱14,000",
     description: "Efficiently handle and organize local inventory.",
-    requirements: ["Can lift heavy loads", "Reliable"]
+    requirements: ["Can lift heavy loads", "Reliable"],
   },
   {
     id: 6,
@@ -62,8 +64,9 @@ export const JOBS_DATA = [
     type: "SPES",
     category: "Student Programs",
     salary: "Allowance based",
-    description: "Special Program for Employment of Students during summer break.",
-    requirements: ["Strictly for students", "Low-income family status"]
+    description:
+      "Special Program for Employment of Students during summer break.",
+    requirements: ["Strictly for students", "Low-income family status"],
   },
   {
     id: 7,
@@ -74,7 +77,7 @@ export const JOBS_DATA = [
     category: "Skilled Labor",
     salary: "₱18,000 - ₱25,000",
     description: "Experienced JCB and Bulldozer operators needed.",
-    requirements: ["Professional Driver's License", "TESDA Cert"]
+    requirements: ["Professional Driver's License", "TESDA Cert"],
   },
   {
     id: 8,
@@ -85,7 +88,7 @@ export const JOBS_DATA = [
     category: "Professional",
     salary: "₱25,000 - ₱35,000",
     description: "Manage financial records for local property developments.",
-    requirements: ["CPA preferred", "Proficient in Excel"]
+    requirements: ["CPA preferred", "Proficient in Excel"],
   },
   {
     id: 9,
@@ -96,7 +99,7 @@ export const JOBS_DATA = [
     category: "Skilled Labor",
     salary: "Daily Rate (10 days)",
     description: "Emergency employment for displaced workers.",
-    requirements: ["Sta. Maria Resident", "Unemployed/Displaced"]
+    requirements: ["Sta. Maria Resident", "Unemployed/Displaced"],
   },
   {
     id: 10,
@@ -107,15 +110,26 @@ export const JOBS_DATA = [
     category: "Skilled Labor",
     salary: "₱15,000 - ₱18,000",
     description: "Shift-based manufacturing work in electronics assembly.",
-    requirements: ["HS Graduate", "Willing to work on shifts"]
-  }
+    requirements: ["HS Graduate", "Willing to work on shifts"],
+  },
 ];
 
 export const BARANGAYS = [
-  "Poblacion", "Guyong", "Caypombo", "Santa Clara", 
-  "San Jose Patag", "Bagbaguin", "Pulong Buhangin", 
-  "Lalakhan", "Catmon", "Sta. Cruz"
+  "Poblacion",
+  "Guyong",
+  "Caypombo",
+  "Santa Clara",
+  "San Jose Patag",
+  "Bagbaguin",
+  "Pulong Buhangin",
+  "Lalakhan",
+  "Catmon",
+  "Sta. Cruz",
 ];
 
-export const JOB_CATEGORIES = ["Professional", "Skilled Labor", "Student Programs"];
+export const JOB_CATEGORIES = [
+  "Professional",
+  "Skilled Labor",
+  "Student Programs",
+];
 export const JOB_TYPES = ["Full-time", "TUPAD", "SPES", "GIP", "Contract"];
