@@ -47,7 +47,7 @@ export const JOBS_DATA = [
   },
   {
     id: 5,
-    title: "Rica Mendoza",
+    title: "Warehouse Worker",
     company: "Santa Clara Logistics Hub",
     location: "Santa Clara, Sta. Maria",
     type: "Full-time",

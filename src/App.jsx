@@ -51,7 +51,7 @@ const Label = ({ children, icon: Icon, className = "" }) => (
   </div>
 );
 
-const IconButton = ({ icon: Icon, onClick, active }) => (
+const IconButton = ({ icon: onClick, active }) => (
   <button
     onClick={onClick}
     className={`p-2 rounded-lg border transition-all ${
