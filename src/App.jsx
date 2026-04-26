@@ -906,7 +906,7 @@ function App() {
 
 export default function Root() {
   return (
-    <Router basename="/joblinked/">
+    <Router>
       <App />
     </Router>
   );
