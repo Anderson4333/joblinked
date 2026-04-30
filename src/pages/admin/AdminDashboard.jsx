@@ -1,17 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShieldCheck, LogOut, Users, Building2, Briefcase, FileText, Trash2, Check, X, Loader2 } from 'lucide-react';
+import { ShieldCheck, Users, Building2, Briefcase, FileText, Trash2, Check, X, Loader2, Filter, Search } from 'lucide-react';
 import { useAuth, api } from '../../context/AuthContext';
+import { JOB_TYPES, JOB_CATEGORIES, INDUSTRIES } from '../../mockData';
 
-const Label = ({ children, icon: Icon }) => (
-  <div className="flex items-center gap-2 industrial-label text-slate-500 dark:text-slate-400">
+const Label = ({ children, icon: Icon, className = "" }) => (
+  <div className={`flex items-center gap-2 industrial-label text-slate-500 dark:text-slate-400 ${className}`}>
     {Icon && <Icon size={14} className="text-blue-600" />}
     <span>{children}</span>
   </div>
 );
 
 export default function AdminDashboard() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState({ userCount: 0, employerCount: 0, jobCount: 0, applicationCount: 0 });
   const [activeTab, setActiveTab] = useState('overview');
@@ -20,6 +21,23 @@ export default function AdminDashboard() {
   const [jobs, setJobs] = useState([]);
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [jobFilter, setJobFilter] = useState({
+    status: 'all',
+    type: 'all',
+    category: 'all'
+  });
+  const [appFilter, setAppFilter] = useState({
+    status: 'all',
+    applicant: '',
+    company: '',
+    category: 'all',
+    type: 'all'
+  });
+  const [employerFilter, setEmployerFilter] = useState({
+    status: 'all',
+    industry: 'all',
+    search: ''
+  });
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -51,11 +69,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
-
   const handleEmployerStatus = async (id, status) => {
     await api.updateEmployerStatus(id, status);
     loadData();
@@ -72,10 +85,60 @@ export default function AdminDashboard() {
     loadData();
   };
 
-  const handleApplicationStatus = async (id, status) => {
-    await api.updateApplicationStatus(id, status);
-    loadData();
-  };
+
+
+  // ── All hooks must be called before any early returns (Rules of Hooks) ──────
+
+  const filteredJobs = useMemo(() => {
+    return jobs.filter(j => {
+      return (jobFilter.status === 'all' || j.status === jobFilter.status) &&
+             (jobFilter.type === 'all' || j.type === jobFilter.type) &&
+             (jobFilter.category === 'all' || j.category === jobFilter.category);
+    });
+  }, [jobs, jobFilter]);
+
+  const filteredApplications = useMemo(() => {
+    if (!Array.isArray(applications)) return [];
+    return applications.filter(a => {
+      const matchesStatus = appFilter.status === 'all' || a.status === appFilter.status;
+      const matchesApplicant = !appFilter.applicant.trim() || 
+        a.full_name?.toLowerCase().includes(appFilter.applicant.toLowerCase()) ||
+        a.email?.toLowerCase().includes(appFilter.applicant.toLowerCase());
+      const matchesCompany = !appFilter.company.trim() ||
+        a.company?.toLowerCase().includes(appFilter.company.toLowerCase());
+      const matchesCategory = appFilter.category === 'all' || a.category === appFilter.category;
+      const matchesType = appFilter.type === 'all' || a.type === appFilter.type;
+      
+      return matchesStatus && matchesApplicant && matchesCompany && matchesCategory && matchesType;
+    });
+  }, [applications, appFilter]);
+
+  const uniqueCompanies = useMemo(() => {
+    if (!Array.isArray(applications)) return [];
+    return [...new Set(applications.map(a => a.company).filter(Boolean))].sort();
+  }, [applications]);
+
+  const uniqueApplicants = useMemo(() => {
+    if (!Array.isArray(applications)) return [];
+    return [...new Set(applications.map(a => a.full_name).filter(Boolean))].sort();
+  }, [applications]);
+
+  const filteredEmployers = useMemo(() => {
+    if (!Array.isArray(employers)) return [];
+    return employers.filter(e => {
+      const matchesStatus = employerFilter.status === 'all' || e.status === employerFilter.status;
+      const matchesIndustry = employerFilter.industry === 'all' || e.industry === employerFilter.industry;
+      const searchTerm = employerFilter.search.toLowerCase().trim();
+      const matchesSearch = !searchTerm ||
+        e.company_name?.toLowerCase().includes(searchTerm) ||
+        e.email?.toLowerCase().includes(searchTerm) ||
+        e.contact_person?.toLowerCase().includes(searchTerm) ||
+        e.industry?.toLowerCase().includes(searchTerm);
+      return matchesStatus && matchesIndustry && matchesSearch;
+    });
+  }, [employers, employerFilter]);
+
+  // ── Early returns after all hooks ────────────────────────────────────────────
 
   if (!user || user.role !== 'admin') {
     return null;
@@ -102,44 +165,49 @@ export default function AdminDashboard() {
               Manage users, employers, jobs, and applications
             </p>
           </div>
-          <button 
-            onClick={handleLogout}
-            className="flex items-center gap-2 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
-          >
-            <LogOut size={16} />
-            Logout
-          </button>
         </div>
 
         <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <div className="bento-card p-6">
+          <button 
+            onClick={() => setActiveTab('users')}
+            className="bento-card p-6 text-left hover:border-blue-600/30 transition-all group"
+          >
             <div className="flex items-center gap-3 mb-2">
-              <Users size={20} className="text-blue-600" />
+              <Users size={20} className="text-blue-600 group-hover:scale-110 transition-transform" />
               <Label>Applicants</Label>
             </div>
             <p className="text-3xl font-black text-slate-950 dark:text-white">{stats.userCount}</p>
-          </div>
-          <div className="bento-card p-6">
+          </button>
+          <button 
+            onClick={() => setActiveTab('employers')}
+            className="bento-card p-6 text-left hover:border-blue-600/30 transition-all group"
+          >
             <div className="flex items-center gap-3 mb-2">
-              <Building2 size={20} className="text-blue-600" />
+              <Building2 size={20} className="text-blue-600 group-hover:scale-110 transition-transform" />
               <Label>Employers</Label>
             </div>
             <p className="text-3xl font-black text-slate-950 dark:text-white">{stats.employerCount}</p>
-          </div>
-          <div className="bento-card p-6">
+          </button>
+          <button 
+            onClick={() => setActiveTab('jobs')}
+            className="bento-card p-6 text-left hover:border-blue-600/30 transition-all group"
+          >
             <div className="flex items-center gap-3 mb-2">
-              <Briefcase size={20} className="text-blue-600" />
+              <Briefcase size={20} className="text-blue-600 group-hover:scale-110 transition-transform" />
               <Label>Active Jobs</Label>
             </div>
             <p className="text-3xl font-black text-slate-950 dark:text-white">{stats.jobCount}</p>
-          </div>
-          <div className="bento-card p-6">
+          </button>
+          <button 
+            onClick={() => setActiveTab('applications')}
+            className="bento-card p-6 text-left hover:border-blue-600/30 transition-all group"
+          >
             <div className="flex items-center gap-3 mb-2">
-              <FileText size={20} className="text-blue-600" />
+              <FileText size={20} className="text-blue-600 group-hover:scale-110 transition-transform" />
               <Label>Applications</Label>
             </div>
             <p className="text-3xl font-black text-slate-950 dark:text-white">{stats.applicationCount}</p>
-          </div>
+          </button>
         </div>
 
         <div className="flex gap-4 mb-8 border-b border-slate-200 dark:border-slate-800 pb-4 overflow-x-auto">
@@ -171,8 +239,8 @@ export default function AdminDashboard() {
               <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
                 <h4 className="font-bold text-slate-900 dark:text-white mb-2">Quick Actions</h4>
                 <div className="flex flex-wrap gap-2">
-                  <Link to="/browse" className="text-blue-600 text-sm hover:underline">View Jobs</Link>
-                  <Link to="/employers" className="text-blue-600 text-sm hover:underline">View Employers</Link>
+                  <button onClick={() => setActiveTab('jobs')} className="text-blue-600 text-sm hover:underline">View Jobs</button>
+                  <button onClick={() => setActiveTab('employers')} className="text-blue-600 text-sm hover:underline">View Employers</button>
                 </div>
               </div>
             </div>
@@ -204,13 +272,51 @@ export default function AdminDashboard() {
 
         {activeTab === 'employers' && (
           <div className="space-y-4">
-            {employers.length === 0 ? (
+            <div className="bento-card p-4 flex flex-wrap gap-4 items-center bg-slate-50 dark:bg-slate-900/50">
+              <div className="flex items-center gap-2 text-slate-500">
+                <Filter size={16} />
+                <span className="text-xs font-bold uppercase tracking-wider">Filters:</span>
+              </div>
+
+              <select
+                value={employerFilter.status}
+                onChange={(e) => setEmployerFilter({...employerFilter, status: e.target.value})}
+                className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20"
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+
+              <select
+                value={employerFilter.industry}
+                onChange={(e) => setEmployerFilter({...employerFilter, industry: e.target.value})}
+                className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20"
+              >
+                <option value="all">All Industries</option>
+                {INDUSTRIES.map(ind => <option key={ind} value={ind}>{ind}</option>)}
+              </select>
+
+              <div className="relative flex-1 min-w-[220px] max-w-sm">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={employerFilter.search}
+                  onChange={(e) => setEmployerFilter({...employerFilter, search: e.target.value})}
+                  placeholder="Search company, email, industry..."
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded pl-8 pr-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20 placeholder:text-slate-400"
+                />
+              </div>
+            </div>
+
+            {filteredEmployers.length === 0 ? (
               <div className="bento-card p-8 text-center">
                 <Building2 size={48} className="mx-auto text-slate-300 dark:text-slate-700 mb-4" />
-                <p className="text-slate-500 font-medium">No registered employers</p>
+                <p className="text-slate-500 font-medium">No matching employers found</p>
               </div>
             ) : (
-              employers.map(e => (
+              filteredEmployers.map(e => (
                 <div key={e.id} className="bento-card p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div>
                     <h4 className="font-bold text-slate-950 dark:text-white">{e.company_name}</h4>
@@ -243,13 +349,45 @@ export default function AdminDashboard() {
 
         {activeTab === 'jobs' && (
           <div className="space-y-4">
-            {jobs.length === 0 ? (
+            <div className="bento-card p-4 flex flex-wrap gap-4 items-center bg-slate-50 dark:bg-slate-900/50">
+              <div className="flex items-center gap-2 text-slate-500">
+                <Filter size={16} />
+                <span className="text-xs font-bold uppercase tracking-wider">Filters:</span>
+              </div>
+              <select 
+                value={jobFilter.status}
+                onChange={(e) => setJobFilter({...jobFilter, status: e.target.value})}
+                className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+              <select 
+                value={jobFilter.type}
+                onChange={(e) => setJobFilter({...jobFilter, type: e.target.value})}
+                className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20"
+              >
+                <option value="all">All Types</option>
+                {JOB_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+              <select 
+                value={jobFilter.category}
+                onChange={(e) => setJobFilter({...jobFilter, category: e.target.value})}
+                className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20"
+              >
+                <option value="all">All Categories</option>
+                {JOB_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+
+            {filteredJobs.length === 0 ? (
               <div className="bento-card p-8 text-center">
                 <Briefcase size={48} className="mx-auto text-slate-300 dark:text-slate-700 mb-4" />
-                <p className="text-slate-500 font-medium">No posted jobs</p>
+                <p className="text-slate-500 font-medium">No jobs matching your filters</p>
               </div>
             ) : (
-              jobs.map(j => (
+              filteredJobs.map(j => (
                 <div key={j.id} className="bento-card p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div>
                     <h4 className="font-bold text-slate-950 dark:text-white">{j.title}</h4>
@@ -274,13 +412,71 @@ export default function AdminDashboard() {
 
         {activeTab === 'applications' && (
           <div className="space-y-4">
-            {applications.length === 0 ? (
+            <div className="bento-card p-4 flex flex-wrap gap-4 items-center bg-slate-50 dark:bg-slate-900/50">
+              <div className="flex items-center gap-2 text-slate-500">
+                <Filter size={16} />
+                <span className="text-xs font-bold uppercase tracking-wider">Filters:</span>
+              </div>
+              
+              <select 
+                value={appFilter.status}
+                onChange={(e) => setAppFilter({...appFilter, status: e.target.value})}
+                className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20"
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="accepted">Accepted</option>
+                <option value="rejected">Rejected</option>
+              </select>
+
+              <select 
+                value={appFilter.category}
+                onChange={(e) => setAppFilter({...appFilter, category: e.target.value})}
+                className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20"
+              >
+                <option value="all">All Categories</option>
+                {JOB_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+
+              <select 
+                value={appFilter.type}
+                onChange={(e) => setAppFilter({...appFilter, type: e.target.value})}
+                className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20"
+              >
+                <option value="all">All Types</option>
+                {JOB_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+
+              <div className="relative flex-1 min-w-[200px] max-w-xs">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={appFilter.applicant}
+                  onChange={(e) => setAppFilter({...appFilter, applicant: e.target.value})}
+                  placeholder="Search applicant name or email..."
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded pl-8 pr-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20 placeholder:text-slate-400"
+                />
+              </div>
+
+              <div className="relative flex-1 min-w-[200px] max-w-xs">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={appFilter.company}
+                  onChange={(e) => setAppFilter({...appFilter, company: e.target.value})}
+                  placeholder="Search employer / company..."
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded pl-8 pr-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20 placeholder:text-slate-400"
+                />
+              </div>
+            </div>
+
+            {filteredApplications.length === 0 ? (
               <div className="bento-card p-8 text-center">
                 <FileText size={48} className="mx-auto text-slate-300 dark:text-slate-700 mb-4" />
-                <p className="text-slate-500 font-medium">No applications</p>
+                <p className="text-slate-500 font-medium">No matching applications found</p>
               </div>
             ) : (
-              applications.map(a => (
+              filteredApplications.map(a => (
                 <div key={a.id} className="bento-card p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div>
                     <h4 className="font-bold text-slate-950 dark:text-white">{a.full_name}</h4>
@@ -295,16 +491,7 @@ export default function AdminDashboard() {
                     }`}>
                       {a.status}
                     </span>
-                    {a.status === 'pending' && (
-                      <>
-                        <button onClick={() => handleApplicationStatus(a.id, 'accepted')} className="text-emerald-600 hover:text-emerald-700">
-                          <Check size={18} />
-                        </button>
-                        <button onClick={() => handleApplicationStatus(a.id, 'rejected')} className="text-red-600 hover:text-red-700">
-                          <X size={18} />
-                        </button>
-                      </>
-                    )}
+
                   </div>
                 </div>
               ))

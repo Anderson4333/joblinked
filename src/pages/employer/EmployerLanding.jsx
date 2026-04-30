@@ -10,7 +10,7 @@ const Label = ({ children, icon: Icon }) => (
 
 export default function EmployerLanding() {
   return (
-    <div className="min-h-screen bg-grid-pattern pt-24 pb-16">
+    <div className="min-h-screen bg-grid-pattern pt-32 pb-16">
       <div className="max-w-7xl mx-auto px-6">
         <div className="max-w-4xl mb-16 space-y-6">
           <Label icon={ShieldCheck}>Employer Portal: v4.2</Label>

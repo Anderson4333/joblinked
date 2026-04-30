@@ -23,22 +23,27 @@ import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 
 function AppContent() {
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem("joblinked_theme") === "dark";
+  });
   const { pathname } = useLocation();
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [pathname]);
 
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
+    document.documentElement.classList.toggle("dark", darkMode);
+    localStorage.setItem("joblinked_theme", darkMode ? "dark" : "light");
+  }, [darkMode]);
+
   const toggleDarkMode = () => {
-    const newDarkMode = !darkMode;
-    setDarkMode(newDarkMode);
-    document.documentElement.setAttribute("data-theme", newDarkMode ? "dark" : "light");
-    document.documentElement.classList.toggle("dark", newDarkMode);
+    setDarkMode(!darkMode);
   };
 
   const authRoutes = [
-    '/',
+    '/login',
     '/applicants/login',
     '/applicants/register',
     '/employers/login',
@@ -61,7 +66,8 @@ function AppContent() {
       <main>
         <ErrorBoundary>
           <Routes>
-            <Route path="/" element={<LoginPage />} />
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<LoginPage />} />
             <Route path="/home" element={<Home />} />
             <Route path="/browse" element={<Browse />} />
             <Route path="/platform" element={<PlatformPage />} />

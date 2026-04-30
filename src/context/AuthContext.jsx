@@ -5,15 +5,14 @@ const API_URL = 'http://localhost:3001/api';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem('joblinked_user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
   const [dbReady, setDbReady] = useState(true);
   const [dbError, setDbError] = useState(null);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('joblinked_user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
     setDbReady(true);
   }, []);
 
@@ -29,7 +28,9 @@ export function AuthProvider({ children }) {
       
       if (data.success) {
         setUser(data.user);
-        localStorage.setItem('joblinked_user', JSON.stringify(data.user));
+        if (role !== 'admin') {
+          localStorage.setItem('joblinked_user', JSON.stringify(data.user));
+        }
         return { success: true };
       } else {
         return { success: false, error: data.error };
@@ -142,6 +143,11 @@ export const api = {
     return res.json();
   },
   
+  getApplicationsByEmployer: async (employerId) => {
+    const res = await fetch(`${API_URL}/applications/employer/${employerId}`);
+    return res.json();
+  },
+  
   createApplication: async (jobId, userId) => {
     const res = await fetch(`${API_URL}/applications`, {
       method: 'POST',
@@ -156,6 +162,13 @@ export const api = {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status })
+    });
+    return res.json();
+  },
+  
+  deleteApplication: async (id) => {
+    const res = await fetch(`${API_URL}/applications/${id}`, {
+      method: 'DELETE'
     });
     return res.json();
   },
@@ -177,6 +190,15 @@ export const api = {
   
   updateEmployerStatus: async (id, status) => {
     const res = await fetch(`${API_URL}/employers/${id}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+    return res.json();
+  },
+  
+  updateJobStatus: async (id, status) => {
+    const res = await fetch(`${API_URL}/jobs/${id}/status`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status })

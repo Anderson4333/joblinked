@@ -51,6 +51,10 @@ applicantDb.exec(`
     barangay TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+`)
+
+// Recreate applications table without foreign key constraint (fixes migration issue)
+applicantDb.exec(`
   CREATE TABLE IF NOT EXISTS applications (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     job_id INTEGER,
@@ -59,6 +63,26 @@ applicantDb.exec(`
     applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 `)
+
+// Migration: fix applications table if it has foreign key issue
+try {
+  const schema = applicantDb.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='applications'").get()
+  if (schema && schema.sql && schema.sql.includes('FOREIGN KEY')) {
+    applicantDb.exec('DROP TABLE IF EXISTS applications')
+    applicantDb.exec(`
+      CREATE TABLE applications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        job_id INTEGER,
+        user_id INTEGER,
+        status TEXT DEFAULT 'pending',
+        applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `)
+    console.log('Migrated applications table to remove foreign key constraints')
+  }
+} catch (e) {
+  // Table might not exist yet, ignore
+}
 
 // Also keep jobs in employer db
 employerDb.exec(`
@@ -154,33 +178,129 @@ app.delete('/api/jobs/:id', (req, res) => {
   res.json({ success: true })
 })
 
+app.put('/api/jobs/:id/status', (req, res) => {
+  employerDb.prepare('UPDATE jobs SET status = ? WHERE id = ?').run(req.body.status, req.params.id)
+  res.json({ success: true })
+})
+
 // ── Applications ──────────────────────────────────────────────────────────────
 
 app.get('/api/applications', (req, res) => {
   // Join across DBs by fetching separately and merging
-  const apps = applicantDb.prepare('SELECT * FROM applications ORDER BY applied_at DESC').all()
-  res.json(apps)
+  const apps = applicantDb.prepare(`
+    SELECT a.*, u.full_name, u.email, u.phone, u.barangay 
+    FROM applications a 
+    JOIN users u ON a.user_id = u.id 
+    ORDER BY a.applied_at DESC
+  `).all()
+  
+  const enrichedApps = apps.map(app => {
+    const job = employerDb.prepare('SELECT * FROM jobs WHERE id = ?').get(app.job_id) || {}
+    return { ...job, ...app, id: app.id, job_id: app.job_id }
+  })
+  
+  res.json(enrichedApps)
 })
 
 app.get('/api/applications/user/:userId', (req, res) => {
-  res.json(applicantDb.prepare('SELECT * FROM applications WHERE user_id = ? ORDER BY applied_at DESC').all(req.params.userId))
+  const apps = applicantDb.prepare('SELECT * FROM applications WHERE user_id = ? ORDER BY applied_at DESC').all(req.params.userId)
+  
+  const enrichedApps = apps.map(app => {
+    const job = employerDb.prepare('SELECT * FROM jobs WHERE id = ?').get(app.job_id) || {}
+    return { ...job, ...app, id: app.id, job_id: app.job_id } // Ensure app status and IDs are preserved
+  })
+  
+  res.json(enrichedApps)
 })
 
 app.get('/api/applications/job/:jobId', (req, res) => {
-  res.json(applicantDb.prepare('SELECT * FROM applications WHERE job_id = ? ORDER BY applied_at DESC').all(req.params.jobId))
+  const query = `
+    SELECT a.*, u.full_name, u.email, u.phone, u.barangay 
+    FROM applications a 
+    JOIN users u ON a.user_id = u.id 
+    WHERE a.job_id = ? 
+    ORDER BY a.applied_at DESC
+  `
+  res.json(applicantDb.prepare(query).all(req.params.jobId))
+})
+
+app.get('/api/applications/employer/:employerId', (req, res) => {
+  const jobs = employerDb.prepare('SELECT id, title FROM jobs WHERE employer_id = ?').all(req.params.employerId)
+  if (jobs.length === 0) return res.json([])
+  
+  const jobMap = {}
+  jobs.forEach(j => jobMap[j.id] = j.title)
+  const jobIds = jobs.map(j => j.id)
+  
+  const query = `
+    SELECT a.*, u.full_name, u.email, u.phone, u.barangay 
+    FROM applications a 
+    JOIN users u ON a.user_id = u.id 
+    WHERE a.job_id IN (${jobIds.map(() => '?').join(',')}) 
+    ORDER BY a.applied_at DESC
+  `
+  
+  const apps = applicantDb.prepare(query).all(...jobIds)
+  
+  const enrichedApps = apps.map(app => ({
+    ...app,
+    job_title: jobMap[app.job_id]
+  }))
+  
+  res.json(enrichedApps)
 })
 
 app.post('/api/applications', (req, res) => {
   const { jobId, userId } = req.body
-  const result = applicantDb.prepare(
-    'INSERT INTO applications (job_id, user_id, status) VALUES (?, ?, ?)'
-  ).run(jobId, userId, 'pending')
-  res.json({ success: true, applicationId: result.lastInsertRowid })
+  
+  if (!jobId || !userId) {
+    return res.json({ success: false, error: 'Missing jobId or userId' })
+  }
+  
+  // Check for duplicate application first
+  const existing = applicantDb.prepare(
+    'SELECT id FROM applications WHERE job_id = ? AND user_id = ?'
+  ).get(jobId, userId)
+  
+  if (existing) {
+    return res.json({ success: false, error: 'You have already applied to this job' })
+  }
+  
+  // Check if job is active
+  const job = employerDb.prepare('SELECT status FROM jobs WHERE id = ?').get(jobId)
+  if (!job || job.status !== 'active') {
+    return res.json({ success: false, error: 'This job posting is currently inactive' })
+  }
+  
+  try {
+    const result = applicantDb.prepare(
+      'INSERT INTO applications (job_id, user_id, status) VALUES (?, ?, ?)'
+    ).run(jobId, userId, 'pending')
+    res.json({ success: true, applicationId: result.lastInsertRowid })
+  } catch (e) {
+    console.error('Application error:', e.message)
+    res.json({ success: false, error: e.message })
+  }
 })
 
 app.put('/api/applications/:id/status', (req, res) => {
   applicantDb.prepare('UPDATE applications SET status = ? WHERE id = ?').run(req.body.status, req.params.id)
   res.json({ success: true })
+})
+
+app.delete('/api/applications/:id', (req, res) => {
+  try {
+    const appId = req.params.id;
+    const app = applicantDb.prepare('SELECT status FROM applications WHERE id = ?').get(appId);
+    if (!app) return res.json({ success: false, error: 'Application not found' });
+    if (app.status !== 'pending') return res.json({ success: false, error: 'Cannot revert processed applications' });
+    
+    applicantDb.prepare('DELETE FROM applications WHERE id = ?').run(appId);
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Delete application error:', e.message);
+    res.json({ success: false, error: e.message });
+  }
 })
 
 // ── Admin management ──────────────────────────────────────────────────────────

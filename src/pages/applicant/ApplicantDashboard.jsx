@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShieldCheck, LogOut, Briefcase, MapPin, ArrowRight, FileText, Loader2 } from 'lucide-react';
+import { ShieldCheck, Briefcase, MapPin, ArrowRight, FileText, Loader2, X, Filter } from 'lucide-react';
 import { useAuth, api } from '../../context/AuthContext';
+import toast from 'react-hot-toast';
 
 const Label = ({ children, icon: Icon }) => (
   <div className="flex items-center gap-2 industrial-label text-slate-500 dark:text-slate-400">
@@ -10,13 +11,27 @@ const Label = ({ children, icon: Icon }) => (
   </div>
 );
 
+const formatPrice = (price) => {
+  if (!price) return 'N/A';
+  if (typeof price === 'string' && (price.includes('₱') || price.includes('PHP'))) return price;
+  
+  const num = parseFloat(String(price).replace(/,/g, ''));
+  if (isNaN(num)) return price;
+
+  return 'PHP ' + new Intl.NumberFormat('en-PH', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(num);
+};
+
 export default function ApplicantDashboard() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [applications, setApplications] = useState([]);
-  const [jobs, setJobs] = useState([]);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedJobDetails, setSelectedJobDetails] = useState(null);
 
   useEffect(() => {
     if (!user || user.role !== 'applicant') {
@@ -29,12 +44,8 @@ export default function ApplicantDashboard() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [apps, allJobs] = await Promise.all([
-        api.getApplicationsByUser(user.id),
-        api.getJobs()
-      ]);
+      const apps = await api.getApplicationsByUser(user.id);
       setApplications(apps);
-      setJobs(allJobs.slice(0, 5));
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -42,9 +53,25 @@ export default function ApplicantDashboard() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
+  const filteredApplications = useMemo(() => {
+    if (statusFilter === 'all') return applications;
+    return applications.filter(app => app.status === statusFilter);
+  }, [applications, statusFilter]);
+
+  const handleRevert = async (appId) => {
+    if (!confirm('Are you sure you want to revert this application?')) return;
+    try {
+      const response = await api.deleteApplication(appId);
+      if (response.success) {
+        toast.success('Application reverted successfully');
+        loadData();
+      } else {
+        toast.error(response.error || 'Failed to revert application');
+      }
+    } catch (error) {
+      console.error('Error reverting application:', error);
+      toast.error('Connection error');
+    }
   };
 
   if (!user || user.role !== 'applicant') {
@@ -72,13 +99,6 @@ export default function ApplicantDashboard() {
               {user.barangay ? `Barangay: ${user.barangay}` : 'Complete your profile to apply for jobs'}
             </p>
           </div>
-          <button 
-            onClick={handleLogout}
-            className="flex items-center gap-2 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
-          >
-            <LogOut size={16} />
-            Logout
-          </button>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6 mb-8">
@@ -103,7 +123,7 @@ export default function ApplicantDashboard() {
         </div>
 
         <div className="flex gap-4 mb-8 border-b border-slate-200 dark:border-slate-800 pb-4">
-          {['overview', 'jobs', 'applications'].map(tab => (
+          {['overview', 'applications'].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -156,38 +176,26 @@ export default function ApplicantDashboard() {
           </div>
         )}
 
-        {activeTab === 'jobs' && (
-          <div className="space-y-4">
-            <h3 className="text-xl font-black text-slate-950 dark:text-white mb-4">Recommended Jobs</h3>
-            {jobs.map(job => (
-              <div key={job.id} className="bento-card p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="industrial-label text-blue-600">{job.type}</span>
-                    <span className="text-slate-300">•</span>
-                    <span className="industrial-label text-slate-500">{job.category}</span>
-                  </div>
-                  <h4 className="text-lg font-bold text-slate-950 dark:text-white">{job.title}</h4>
-                  <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400 mt-1">
-                    <span className="flex items-center gap-1"><Briefcase size={14} /> {job.company}</span>
-                    <span className="flex items-center gap-1"><MapPin size={14} /> {job.location}</span>
-                  </div>
-                </div>
-                <span className="font-bold text-slate-900 dark:text-white">{job.salary}</span>
-              </div>
-            ))}
-            <Link 
-              to="/browse" 
-              className="inline-flex items-center gap-2 text-blue-600 font-bold text-sm mt-4"
-            >
-              View all jobs <ArrowRight size={16} />
-            </Link>
-          </div>
-        )}
-
         {activeTab === 'applications' && (
           <div className="space-y-4">
-            {applications.length === 0 ? (
+            <div className="bento-card p-4 flex flex-wrap gap-4 items-center bg-slate-50 dark:bg-slate-900/50 mb-2">
+              <div className="flex items-center gap-2 text-slate-500">
+                <Filter size={16} />
+                <span className="text-xs font-bold uppercase tracking-wider">Filter Status:</span>
+              </div>
+              <select 
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-3 py-1.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20"
+              >
+                <option value="all">All Applications</option>
+                <option value="pending">Pending</option>
+                <option value="accepted">Accepted</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+
+            {filteredApplications.length === 0 ? (
               <div className="bento-card p-8 text-center">
                 <FileText size={48} className="mx-auto text-slate-300 dark:text-slate-700 mb-4" />
                 <p className="text-slate-500 font-medium">No applications yet</p>
@@ -199,14 +207,18 @@ export default function ApplicantDashboard() {
                 </Link>
               </div>
             ) : (
-              applications.map(app => (
-                <div key={app.id} className="bento-card p-6">
+              filteredApplications.map(app => (
+                <div 
+                  key={app.id} 
+                  className="bento-card p-6 cursor-pointer group/details hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-all"
+                  onClick={() => setSelectedJobDetails(app)}
+                >
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                      <h4 className="text-lg font-bold text-slate-950 dark:text-white">{app.title}</h4>
+                    <div className="flex-1 w-full md:w-auto">
+                      <h4 className="text-lg font-bold text-slate-950 dark:text-white group-hover/details:text-blue-600 transition-colors">{app.title}</h4>
                       <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400 mt-1">
-                        <span>{app.company}</span>
-                        <span>{app.location}</span>
+                        <span className="flex items-center gap-1.5"><Briefcase size={14} /> {app.company}</span>
+                        <span className="flex items-center gap-1.5"><MapPin size={14} /> {app.location}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
@@ -217,9 +229,21 @@ export default function ApplicantDashboard() {
                       }`}>
                         {app.status.toUpperCase()}
                       </span>
-                      <span className="text-slate-500 text-sm">
+                      <span className="text-slate-500 text-sm whitespace-nowrap">
                         {new Date(app.applied_at).toLocaleDateString()}
                       </span>
+                      {app.status === 'pending' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRevert(app.id);
+                          }}
+                          className="ml-2 p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          title="Revert Application"
+                        >
+                          <X size={16} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -228,6 +252,56 @@ export default function ApplicantDashboard() {
           </div>
         )}
       </div>
+
+      {/* Job Details Modal */}
+      {selectedJobDetails && (
+        <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0B0F19] rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-slate-200 dark:border-slate-800 shadow-2xl">
+            <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-start sticky top-0 bg-white dark:bg-[#0B0F19] rounded-t-2xl z-10">
+              <div>
+                <h3 className="text-2xl font-black text-slate-950 dark:text-white">Job Details</h3>
+                <p className="text-slate-500 font-medium mt-1">{selectedJobDetails.title}</p>
+              </div>
+              <button 
+                onClick={() => setSelectedJobDetails(null)}
+                className="text-slate-500 hover:text-slate-950 dark:hover:text-white transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bento-card p-4">
+                  <Label>Type</Label>
+                  <p className="font-bold text-slate-900 dark:text-white mt-1">{selectedJobDetails.type}</p>
+                </div>
+                <div className="bento-card p-4">
+                  <Label>Category</Label>
+                  <p className="font-bold text-slate-900 dark:text-white mt-1">{selectedJobDetails.category}</p>
+                </div>
+                <div className="bento-card p-4">
+                  <Label>Salary</Label>
+                  <p className="font-bold text-slate-900 dark:text-white mt-1">{formatPrice(selectedJobDetails.salary)}</p>
+                </div>
+                <div className="bento-card p-4">
+                  <Label>Location</Label>
+                  <p className="font-bold text-slate-900 dark:text-white mt-1">{selectedJobDetails.location}</p>
+                </div>
+              </div>
+              
+              <div>
+                <Label className="mb-2">Description</Label>
+                <p className="text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed">{selectedJobDetails.description}</p>
+              </div>
+              
+              <div>
+                <Label className="mb-2">Requirements</Label>
+                <p className="text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed">{selectedJobDetails.requirements}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

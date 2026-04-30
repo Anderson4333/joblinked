@@ -133,3 +133,16 @@ export const JOB_CATEGORIES = [
   "Student Programs",
 ];
 export const JOB_TYPES = ["Full-time", "TUPAD", "SPES", "GIP", "Contract"];
+
+export const INDUSTRIES = [
+  'Manufacturing',
+  'Retail & Trading',
+  'Food & Hospitality',
+  'Healthcare',
+  'Construction',
+  'Transportation & Logistics',
+  'Technology & Services',
+  'Agriculture',
+  'Education',
+  'Other'
+];

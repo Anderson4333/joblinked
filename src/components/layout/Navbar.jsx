@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Layers, Sun, Moon, LogOut, ChevronDown, User, Briefcase, Shield } from 'lucide-react';
+import { Layers, Sun, Moon, LogOut, User, Briefcase, Shield } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 const useScroll = () => {
@@ -31,11 +31,10 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
-  const [showDropdown, setShowDropdown] = useState(false);
 
   const handleLogout = () => {
     logout();
-    navigate('/');
+    navigate('/login');
   };
 
   const getDashboardLink = () => {
@@ -69,15 +68,21 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
         </Link>
 
         <div className="hidden md:flex items-center gap-6">
-          {user?.role === 'admin' ? (
+          {(user?.role === 'admin' || user?.role === 'employer') ? (
             <Link
-              to="/admin/dashboard"
+              to={dashboardLink?.to}
               className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white transition-colors"
             >
               Dashboard
             </Link>
           ) : (
             <>
+              <Link
+                to="/"
+                className={`text-sm font-medium transition-colors ${location.pathname === '/' ? 'text-slate-950 dark:text-white' : 'text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white'}`}
+              >
+                Home
+              </Link>
               <Link
                 to="/platform"
                 className={`text-sm font-medium transition-colors ${location.pathname === '/platform' ? 'text-slate-950 dark:text-white' : 'text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white'}`}
@@ -96,40 +101,14 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
               >
                 Sectors
               </Link>
-              
-              <div className="relative">
-                <button
-                  onClick={() => setShowDropdown(!showDropdown)}
-                  className="flex items-center gap-1 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white transition-colors"
+              {user && (
+                <Link
+                  to={dashboardLink?.to}
+                  className={`text-sm font-medium transition-colors ${location.pathname === dashboardLink?.to ? 'text-slate-950 dark:text-white' : 'text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white'}`}
                 >
-                  Portals <ChevronDown size={14} />
-                </button>
-                {showDropdown && (
-                  <div className="absolute top-full mt-2 left-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl py-2 min-w-[180px]">
-                    <Link
-                      to="/applicants"
-                      className="block px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
-                      onClick={() => setShowDropdown(false)}
-                    >
-                      For Job Seekers
-                    </Link>
-                    <Link
-                      to="/employers"
-                      className="block px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
-                      onClick={() => setShowDropdown(false)}
-                    >
-                      For Employers
-                    </Link>
-                    <Link
-                      to="/admin/login"
-                      className="block px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
-                      onClick={() => setShowDropdown(false)}
-                    >
-                      Admin
-                    </Link>
-                  </div>
-                )}
-              </div>
+                  Dashboard
+                </Link>
+              )}
             </>
           )}
         </div>
@@ -153,31 +132,12 @@ export default function Navbar({ darkMode, toggleDarkMode }) {
               <IconButton icon={LogOut} onClick={handleLogout} />
             </div>
           ) : (
-            <div className="relative group">
-              <button className="btn-shimmer bg-slate-950 dark:bg-white text-white dark:text-slate-950 text-sm font-semibold px-5 py-2 rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-all">
-                Access Portal
-              </button>
-              <div className="absolute right-0 top-full mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl py-2 min-w-[180px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-                <Link
-                  to="/applicants/login"
-                  className="block px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  Job Seeker Login
-                </Link>
-                <Link
-                  to="/employers/login"
-                  className="block px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  Employer Login
-                </Link>
-                <Link
-                  to="/admin/login"
-                  className="block px-4 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  Admin Login
-                </Link>
-              </div>
-            </div>
+            <Link
+              to="/login"
+              className="btn-shimmer bg-slate-950 dark:bg-white text-white dark:text-slate-950 text-sm font-semibold px-5 py-2 rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-all"
+            >
+              Login
+            </Link>
           )}
         </div>
       </div>

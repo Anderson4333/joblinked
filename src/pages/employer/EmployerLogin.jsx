@@ -33,7 +33,7 @@ export default function EmployerLogin() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-grid-pattern p-6 py-12 md:py-20">
       <div className="w-full max-w-md">
         <Link 
-          to="/employers" 
+          to="/login" 
           className="flex items-center gap-2 text-slate-500 hover:text-slate-900 dark:hover:text-white mb-6 transition-colors"
         >
           <ArrowLeft size={16} />

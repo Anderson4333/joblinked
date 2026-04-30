@@ -1,7 +1,6 @@
-import { useMemo, useState } from 'react';
-import { MapPin, ArrowRight } from 'lucide-react';
-import { JOBS_DATA } from '../../mockData';
-import { Globe, Cpu, Building2, ShieldCheck, PieChart } from 'lucide-react';
+import { useMemo, useState, useEffect } from 'react';
+import { MapPin, ArrowRight, X, Globe, Cpu, Building2, ShieldCheck, PieChart } from 'lucide-react';
+import { useAuth, api } from '../../context/AuthContext';
 
 const Label = ({ children, icon: Icon, className = "" }) => (
   <div className={`flex items-center gap-2 industrial-label text-slate-500 dark:text-slate-400 ${className}`}>
@@ -10,20 +9,47 @@ const Label = ({ children, icon: Icon, className = "" }) => (
   </div>
 );
 
+const formatPrice = (price) => {
+  if (!price) return 'N/A';
+  if (typeof price === 'string' && (price.includes('₱') || price.includes('PHP'))) return price;
+  
+  const num = parseFloat(String(price).replace(/,/g, ''));
+  if (isNaN(num)) return price;
+
+  return 'PHP ' + new Intl.NumberFormat('en-PH', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(num);
+};
+
 export default function SectorsPage() {
   const [activeSector, setActiveSector] = useState("All");
+  const [jobs, setJobs] = useState([]);
+  const [selectedJobDetails, setSelectedJobDetails] = useState(null);
+
+  useEffect(() => {
+    const loadJobs = async () => {
+      try {
+        const data = await api.getJobs();
+        setJobs(data);
+      } catch (error) {
+        console.error('Error loading jobs:', error);
+      }
+    };
+    loadJobs();
+  }, []);
 
   const sectors = [
-    { id: "All", title: "Global Database", icon: Globe, count: JOBS_DATA.length },
-    { id: "Professional", title: "Tech & Corporate", icon: Cpu, count: JOBS_DATA.filter((j) => j.category === "Professional").length },
-    { id: "Skilled Labor", title: "Industrial & Mfg", icon: Building2, count: JOBS_DATA.filter((j) => j.category === "Skilled Labor").length },
-    { id: "Student Programs", title: "Gov't & Youth", icon: ShieldCheck, count: JOBS_DATA.filter((j) => j.category === "Student Programs").length },
+    { id: "All", title: "Global Database", icon: Globe, count: jobs.length },
+    { id: "Professional", title: "Tech & Corporate", icon: Cpu, count: jobs.filter((j) => j.category === "Professional").length },
+    { id: "Skilled Labor", title: "Industrial & Mfg", icon: Building2, count: jobs.filter((j) => j.category === "Skilled Labor").length },
+    { id: "Student Programs", title: "Gov't & Youth", icon: ShieldCheck, count: jobs.filter((j) => j.category === "Student Programs").length },
   ];
 
   const filteredJobs = useMemo(() => {
-    if (activeSector === "All") return JOBS_DATA;
-    return JOBS_DATA.filter((j) => j.category === activeSector);
-  }, [activeSector]);
+    if (activeSector === "All") return jobs;
+    return jobs.filter((j) => j.category === activeSector);
+  }, [activeSector, jobs]);
 
   return (
     <div className="bg-grid-pattern min-h-screen pt-32 pb-24">
@@ -80,6 +106,7 @@ export default function SectorsPage() {
               {filteredJobs.map((job) => (
                 <div
                   key={job.id}
+                  onClick={() => setSelectedJobDetails(job)}
                   className="group p-6 rounded-2xl border border-slate-100 dark:border-slate-800 hover:border-blue-600/30 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all flex flex-col md:flex-row gap-6 justify-between items-start md:items-center cursor-pointer"
                 >
                   <div>
@@ -96,7 +123,7 @@ export default function SectorsPage() {
                     </p>
                   </div>
                   <div className="flex md:flex-col items-center md:items-end justify-between w-full md:w-auto gap-4 shrink-0">
-                    <span className="font-bold text-slate-900 dark:text-white">{job.salary}</span>
+                    <span className="font-bold text-slate-900 dark:text-white">{formatPrice(job.salary)}</span>
                     <button className="text-sm font-bold text-blue-600 flex items-center gap-1 opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
                       View Specs <ArrowRight size={16} />
                     </button>
@@ -107,6 +134,56 @@ export default function SectorsPage() {
           </div>
         </div>
       </div>
+
+      {/* Job Details Modal */}
+      {selectedJobDetails && (
+        <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0B0F19] rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-slate-200 dark:border-slate-800 shadow-2xl">
+            <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-start sticky top-0 bg-white dark:bg-[#0B0F19] rounded-t-2xl z-10">
+              <div>
+                <h3 className="text-2xl font-black text-slate-950 dark:text-white">Job Details</h3>
+                <p className="text-slate-500 font-medium mt-1">{selectedJobDetails.title}</p>
+              </div>
+              <button 
+                onClick={() => setSelectedJobDetails(null)}
+                className="text-slate-500 hover:text-slate-950 dark:hover:text-white transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bento-card p-4">
+                  <Label>Type</Label>
+                  <p className="font-bold text-slate-900 dark:text-white mt-1">{selectedJobDetails.type}</p>
+                </div>
+                <div className="bento-card p-4">
+                  <Label>Category</Label>
+                  <p className="font-bold text-slate-900 dark:text-white mt-1">{selectedJobDetails.category}</p>
+                </div>
+                <div className="bento-card p-4">
+                  <Label>Salary</Label>
+                  <p className="font-bold text-slate-900 dark:text-white mt-1">{formatPrice(selectedJobDetails.salary)}</p>
+                </div>
+                <div className="bento-card p-4">
+                  <Label>Location</Label>
+                  <p className="font-bold text-slate-900 dark:text-white mt-1">{selectedJobDetails.location}</p>
+                </div>
+              </div>
+              
+              <div>
+                <Label className="mb-2">Description</Label>
+                <p className="text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed">{selectedJobDetails.description}</p>
+              </div>
+              
+              <div>
+                <Label className="mb-2">Requirements</Label>
+                <p className="text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed">{selectedJobDetails.requirements}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
